@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react'
 import LoadingScreen from './components/LoadingScreen'
 import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
 
 import FeedTracker from './pages/FeedTracker'
 import PoopTracker from './pages/PoopTracker'
@@ -36,15 +38,14 @@ function PrivateRoute({ children }) {
   }
 
   if (!user) {
-    return <Navigate to="/onboarding" />;
+    return <Navigate to="/login" />;
   }
 
-  // If user exists but no profile, they might need to onboard, 
-  // BUT we are protecting dashboard routes here.
-  // Ideally, /onboarding creates the profile.
-  // So if no profile, redirect to onboarding?
-  // Let's assume if they are authenticated they "should" have a profile, 
-  // OR they are currently anonymous and need to create one.
+  // If user exists but no profile, and we are NOT on onboarding, force onboarding
+  // We handle this redirect in the routes below to avoid infinite loops here if possible,
+  // OR we just say PrivateRoute requires PROFILE too?
+  // Let's keep it simple: PrivateRoute ensures AUTH.
+  // Profile check can be done inside specific pages or here.
 
   return children;
 }
@@ -52,20 +53,35 @@ function PrivateRoute({ children }) {
 function AppRoutes() {
   const { user, loading } = useAuth();
   const [profile, setProfile] = useState(null);
+  const [fetchingProfile, setFetchingProfile] = useState(true);
 
   // Check if user is already onboarded to redirect from /
   useEffect(() => {
-    if (user) {
-      userStore.get().then(p => setProfile(p));
+    async function fetch() {
+      if (user) {
+        const p = await userStore.get();
+        setProfile(p);
+      }
+      setFetchingProfile(false);
     }
-  }, [user]);
+    if (!loading) fetch();
+  }, [user, loading]);
 
-  if (loading) return <LoadingScreen />;
+  if (loading || (user && fetchingProfile)) return <LoadingScreen />;
 
   return (
     <div className="container">
       <Routes>
-        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/login" element={!user ? <Login /> : <Navigate to={profile ? "/dashboard" : "/onboarding"} />} />
+        <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/onboarding" />} />
+
+        <Route path="/onboarding" element={
+          <PrivateRoute>
+            {/* Provide user so Onboarding knows we are auth'd but maybe no profile yet */}
+            <Onboarding />
+          </PrivateRoute>
+        } />
+
         <Route path="/dashboard" element={
           <PrivateRoute>
             <Dashboard />
@@ -96,7 +112,7 @@ function AppRoutes() {
             <Reports />
           </PrivateRoute>
         } />
-        <Route path="/" element={<Navigate to={user && profile ? "/dashboard" : "/onboarding"} />} />
+        <Route path="/" element={<Navigate to={user ? (profile ? "/dashboard" : "/onboarding") : "/login"} />} />
       </Routes>
     </div>
   );

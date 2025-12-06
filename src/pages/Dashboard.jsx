@@ -1,14 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userStore } from '../services/userStore';
+import { useAuth } from '../contexts/AuthContext';
+import { LogOut } from 'lucide-react';
 
 export default function Dashboard() {
     const navigate = useNavigate();
+    const { signOut } = useAuth();
     const [user, setUser] = useState(null);
 
     useEffect(() => {
         userStore.get().then(setUser);
     }, []);
+
+    const handleSignOut = async () => {
+        await signOut();
+        navigate('/login');
+    }
 
     return (
         <div style={{ paddingBottom: '5rem' }}>
@@ -22,17 +30,22 @@ export default function Dashboard() {
                     <h1 style={{ fontSize: '1.5rem' }}>Hi, {user?.name || 'Parent'}</h1>
                     <p style={{ color: 'var(--text-muted)' }}>Here is your daily overview</p>
                 </div>
-                <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    overflow: 'hidden',
-                    background: 'var(--background)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}>
-                    <img src="/logo.png" alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <button onClick={handleSignOut} style={{ padding: '0.5rem', borderRadius: '50%', border: '1px solid var(--border)', background: 'transparent' }}>
+                        <LogOut size={20} color="var(--text-muted)" />
+                    </button>
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        background: 'var(--background)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <img src="/logo.png" alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
                 </div>
             </header>
 

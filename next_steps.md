@@ -23,7 +23,7 @@ Both are excellent "Backend-as-a-Service" platforms perfect for React apps.
 
 ## 2. Pushing to GitHub
 Version control safely stores your code.
-
+co
 1.  **Initialize Git** (if not done):
     ```bash
     git init
@@ -58,8 +58,20 @@ For React/Vite apps, **Vercel** or **Netlify** are the industry standards. They 
     - Build Command: `npm run build`
     - Output Directory: `dist`
 6.  **Environment Variables**:
-    - **CRITICAL**: You must add your `VITE_GEMINI_API_KEY` in the Vercel dashboard under "Environment Variables".
-    - Paste the value you have in your local `.env`.
+    - **CRITICAL**: You must add the following keys in the Vercel dashboard under "Settings" -> "Environment Variables":
+        - `VITE_GEMINI_API_KEY`
+        - `VITE_SUPABASE_URL`
+        - `VITE_SUPABASE_ANON_KEY`
+    - Copy the values from your local `.env` (or the values we used previously).
 7.  **Deploy**: Click "Deploy".
 
-Your app will be live at `https://salubris.vercel.app` (or similar) in minutes!
+## 4. Using on iPhone (Add to Home Screen)
+Once deployed to Vercel, you will get a URL (e.g., `https://salubris.vercel.app`).
+
+1.  **Open Safari** on your iPhone.
+2.  Navigate to your deployed URL.
+3.  Tap the **Share** button (box with an arrow pointing up) at the bottom.
+4.  Scroll down and tap **"Add to Home Screen"**.
+5.  Name it "Salubris" and tap **Add**.
+
+It will now appear as an app icon on your home screen and open in full-screen mode, feeling just like a native app!
