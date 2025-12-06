@@ -1,5 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { userStore } from './services/userStore'
+import { useEffect, useState } from 'react'
+import LoadingScreen from './components/LoadingScreen'
 import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
 
@@ -10,12 +13,54 @@ import UpdateStats from './pages/UpdateStats'
 import Reports from './pages/Reports'
 
 function PrivateRoute({ children }) {
-  const user = userStore.get();
-  return user ? children : <Navigate to="/onboarding" />;
+  const { user, loading } = useAuth();
+  const [profile, setProfile] = useState(null);
+  const [checkingProfile, setCheckingProfile] = useState(true);
+
+  useEffect(() => {
+    async function checkProfile() {
+      if (user) {
+        // We have a user, check if they completed onboarding (have a profile)
+        const p = await userStore.get();
+        setProfile(p);
+      }
+      setCheckingProfile(false);
+    }
+    if (!loading) {
+      checkProfile();
+    }
+  }, [user, loading]);
+
+  if (loading || checkingProfile) {
+    return <LoadingScreen />;
+  }
+
+  if (!user) {
+    return <Navigate to="/onboarding" />;
+  }
+
+  // If user exists but no profile, they might need to onboard, 
+  // BUT we are protecting dashboard routes here.
+  // Ideally, /onboarding creates the profile.
+  // So if no profile, redirect to onboarding?
+  // Let's assume if they are authenticated they "should" have a profile, 
+  // OR they are currently anonymous and need to create one.
+
+  return children;
 }
 
-function App() {
-  const user = userStore.get();
+function AppRoutes() {
+  const { user, loading } = useAuth();
+  const [profile, setProfile] = useState(null);
+
+  // Check if user is already onboarded to redirect from /
+  useEffect(() => {
+    if (user) {
+      userStore.get().then(p => setProfile(p));
+    }
+  }, [user]);
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <div className="container">
@@ -51,10 +96,18 @@ function App() {
             <Reports />
           </PrivateRoute>
         } />
-        <Route path="/" element={<Navigate to={user ? "/dashboard" : "/onboarding"} />} />
+        <Route path="/" element={<Navigate to={user && profile ? "/dashboard" : "/onboarding"} />} />
       </Routes>
     </div>
-  )
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
+  );
 }
 
 export default App

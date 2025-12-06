@@ -1,26 +1,60 @@
+import { supabase } from './supabase';
+
 const FEED_KEY = 'salubris_feeds';
 
 export const feedStore = {
-    getAll: () => {
-        const data = localStorage.getItem(FEED_KEY);
-        return data ? JSON.parse(data) : [];
+    getAll: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data } = await supabase
+            .from('feeds')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('timestamp', { ascending: false });
+        return data || [];
     },
 
-    add: (feed) => {
-        const feeds = feedStore.getAll();
-        const newFeed = {
-            id: Date.now().toString(),
-            timestamp: new Date().toISOString(),
-            ...feed
-        };
-        feeds.push(newFeed);
-        localStorage.setItem(FEED_KEY, JSON.stringify(feeds));
-        return newFeed;
+    add: async (feed) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Not authenticated");
+
+        const { data, error } = await supabase
+            .from('feeds')
+            .insert({
+                user_id: user.id,
+                type: feed.type,
+                subtype: feed.subtype,
+                amount_ml: feed.amount,
+                timestamp: feed.timestamp || new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Backup to local
+        // const current = JSON.parse(localStorage.getItem(FEED_KEY) || '[]');
+        // localStorage.setItem(FEED_KEY, JSON.stringify([feed, ...current]));
+
+        return data;
     },
 
-    getToday: () => {
-        const feeds = feedStore.getAll();
-        const today = new Date().toDateString();
-        return feeds.filter(f => new Date(f.timestamp).toDateString() === today).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    getToday: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const { data } = await supabase
+            .from('feeds')
+            .select('*')
+            .eq('user_id', user.id)
+            .gte('timestamp', today.toISOString())
+            .order('timestamp', { ascending: false });
+
+        // Map back to frontend expectation if needed (amount_ml -> amount)
+        return (data || []).map(f => ({ ...f, amount: f.amount_ml }));
     }
 };

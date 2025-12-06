@@ -15,7 +15,7 @@ export default function PoopAnalysis() {
 
     useEffect(() => {
         if (view === 'history') {
-            setHistory(analysisStore.getAll());
+            analysisStore.getAll().then(setHistory);
         }
     }, [view]);
 
@@ -48,7 +48,7 @@ export default function PoopAnalysis() {
 
             setResult(analysisResult);
             // Auto-save to history
-            analysisStore.save(analysisResult, image);
+            await analysisStore.save(analysisResult, image);
 
         } catch (error) {
             console.error("Analysis Component Error:", error);
@@ -187,18 +187,22 @@ export default function PoopAnalysis() {
                                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                                 {new Date(item.timestamp).toLocaleDateString()} {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
-                                            {item.result.isAlarming ? (
+                                            {item.result?.isAlarming ? (
                                                 <span style={{ fontSize: '0.75rem', color: 'var(--danger)', fontWeight: '600', background: '#FEF2F2', padding: '0.125rem 0.5rem', borderRadius: '999px' }}>Attention</span>
                                             ) : (
                                                 <span style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: '600', background: '#F0FDF4', padding: '0.125rem 0.5rem', borderRadius: '999px' }}>Healthy</span>
                                             )}
                                         </div>
-                                        <p style={{ fontWeight: '600', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{item.result.color}, {item.result.consistency}</p>
-                                        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.result.recommendation}</p>
+                                        {item.result && (
+                                            <>
+                                                <p style={{ fontWeight: '600', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{item.result.color}, {item.result.consistency}</p>
+                                                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.result.recommendation}</p>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                                 <div style={{ padding: '1rem', background: '#FAFAFA' }}>
-                                    <p style={{ fontSize: '0.875rem' }}>{item.result.analysis}</p>
+                                    <p style={{ fontSize: '0.875rem' }}>{item.result?.analysis || 'No analysis details available.'}</p>
                                 </div>
                             </div>
                         ))

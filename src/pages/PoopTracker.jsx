@@ -12,19 +12,25 @@ export default function PoopTracker() {
     const [showSuccess, setShowSuccess] = useState(false);
 
     useEffect(() => {
-        setEvents(poopStore.getToday());
+        poopStore.getToday().then(setEvents);
     }, []);
 
-    const handleSave = (e) => {
+    const handleSave = async (e) => {
         e.preventDefault();
-        poopStore.add({
-            type,
-            consistency: type !== 'pee' ? consistency : null,
-            color: type !== 'pee' ? color : null
-        });
-        setEvents(poopStore.getToday());
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 2000);
+        try {
+            await poopStore.add({
+                type,
+                consistency: type !== 'pee' ? consistency : null,
+                color: type !== 'pee' ? color : null
+            });
+            const today = await poopStore.getToday();
+            setEvents(today);
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 2000);
+        } catch (error) {
+            console.error(error);
+            alert('Failed to log event');
+        }
     };
 
     const getIcon = (event) => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { statsStore } from '../services/statsStore';
 import { userStore } from '../services/userStore';
@@ -6,26 +6,41 @@ import { ArrowLeft, CheckCircle } from 'lucide-react';
 
 export default function UpdateStats() {
     const navigate = useNavigate();
-    const user = userStore.get();
-    const [weight, setWeight] = useState(user?.weightKg || '');
-    const [height, setHeight] = useState(user?.heightCm || '');
+    const [user, setUser] = useState(null);
+    const [weight, setWeight] = useState('');
+    const [height, setHeight] = useState('');
     const [showSuccess, setShowSuccess] = useState(false);
 
-    const handleUpdate = (e) => {
+    useEffect(() => {
+        userStore.get().then(u => {
+            if (u) {
+                setUser(u);
+                if (u.weight_kg) setWeight(u.weight_kg);
+                if (u.height_cm) setHeight(u.height_cm);
+            }
+        });
+    }, []);
+
+    const handleUpdate = async (e) => {
         e.preventDefault();
 
-        if (weight && weight !== user?.weightKg) {
-            statsStore.addMetric('weight', weight, 'kg');
-        }
-        if (height && height !== user?.heightCm) {
-            statsStore.addMetric('height', height, 'cm');
-        }
+        try {
+            if (weight && parseFloat(weight) !== parseFloat(user?.weight_kg)) {
+                await statsStore.addMetric('weight', weight, 'kg');
+            }
+            if (height && parseFloat(height) !== parseFloat(user?.height_cm)) {
+                await statsStore.addMetric('height', height, 'cm');
+            }
 
-        setShowSuccess(true);
-        setTimeout(() => {
-            setShowSuccess(false);
-            navigate('/dashboard');
-        }, 1500);
+            setShowSuccess(true);
+            setTimeout(() => {
+                setShowSuccess(false);
+                navigate('/dashboard');
+            }, 1500);
+        } catch (error) {
+            console.error(error);
+            alert('Failed to update stats');
+        }
     };
 
     return (

@@ -14,6 +14,8 @@ export default function Onboarding() {
         feedTarget: '750'
     });
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const handleChange = (e) => {
         setFormData(prev => ({
             ...prev,
@@ -30,19 +32,27 @@ export default function Onboarding() {
         return months <= 0 ? 0 : months;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.name || !formData.dob) return;
+        setIsSubmitting(true);
 
-        const ageMonths = calculateAgeMonths(formData.dob);
+        try {
+            const ageMonths = calculateAgeMonths(formData.dob);
 
-        userStore.save({
-            ...formData,
-            ageMonths, // Calculated age
-            onboardedAt: new Date().toISOString()
-        });
+            await userStore.save({
+                ...formData,
+                ageMonths, // Calculated age
+                onboardedAt: new Date().toISOString()
+            });
 
-        navigate('/dashboard');
+            navigate('/dashboard');
+        } catch (error) {
+            console.error("Failed to save profile:", error);
+            alert("Failed to save profile. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const inputStyle = {
@@ -165,8 +175,8 @@ export default function Onboarding() {
                         />
                     </div>
 
-                    <button type="submit" className="btn" style={{ width: '100%', marginTop: '1rem' }}>
-                        Calculate Health & Continue
+                    <button type="submit" className="btn" style={{ width: '100%', marginTop: '1rem' }} disabled={isSubmitting}>
+                        {isSubmitting ? 'Saving...' : 'Calculate Health & Continue'}
                     </button>
                 </form>
             </div>

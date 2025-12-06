@@ -13,10 +13,10 @@ export default function FeedTracker() {
     const [showSuccess, setShowSuccess] = useState(false);
 
     useEffect(() => {
-        setFeeds(feedStore.getToday());
+        feedStore.getToday().then(setFeeds);
     }, []);
 
-    const handleSave = (e) => {
+    const handleSave = async (e) => {
         e.preventDefault();
 
         // Construct date from today's date + selected time
@@ -24,17 +24,23 @@ export default function FeedTracker() {
         const [hours, minutes] = time.split(':');
         date.setHours(parseInt(hours), parseInt(minutes));
 
-        feedStore.add({
-            type,
-            amount: type === 'milk' ? amount : null,
-            foodItem: type === 'solid' ? foodItem : null,
-            timestamp: date.toISOString()
-        });
-        setFeeds(feedStore.getToday());
-        setAmount('');
-        setFoodItem('');
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 2000);
+        try {
+            await feedStore.add({
+                type,
+                amount: type === 'milk' ? amount : null,
+                foodItem: type === 'solid' ? foodItem : null,
+                timestamp: date.toISOString()
+            });
+            const today = await feedStore.getToday();
+            setFeeds(today);
+            setAmount('');
+            setFoodItem('');
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 2000);
+        } catch (error) {
+            console.error(error);
+            alert('Failed to save feed');
+        }
     };
 
     return (

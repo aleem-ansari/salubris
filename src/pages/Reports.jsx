@@ -13,38 +13,84 @@ export default function Reports() {
     const [feedData, setFeedData] = useState([]);
     const [growthData, setGrowthData] = useState([]);
 
+    const [feedTarget, setFeedTarget] = useState(750);
+
     useEffect(() => {
-        // Mocking daily aggregate for demonstration since we only have single day store
-        const data = [
-            { day: 'Mon', amount: 650 },
-            { day: 'Tue', amount: 720 },
-            { day: 'Wed', amount: 680 },
-            { day: 'Thu', amount: 800 },
-            { day: 'Fri', amount: 750 },
-            { day: 'Sat', amount: 500 }, // Today mock
-            { day: 'Sun', amount: 0 }
-        ];
-        // Inject today's actual data into Saturday for demo (assuming today is Sat)
-        const todayFeeds = feedStore.getToday().filter(f => f.type === 'milk');
-        const todayTotal = todayFeeds.reduce((acc, curr) => acc + parseInt(curr.amount || 0), 0);
-        if (todayTotal > 0) {
-            // Find today index or push (simplified mock logic)
-            data[5].amount = todayTotal;
+        async function fetchData() {
+            try {
+                // 1. Feeds
+                const feeds = await feedStore.getAll(); // Fetch all feeds
+
+                // Group by day (last 7 days from today)
+                const last7Days = [];
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date();
+                    d.setDate(d.getDate() - i);
+                    last7Days.push(d);
+                }
+
+                const aggregatedFeeds = last7Days.map(date => {
+                    const dateStr = date.toDateString();
+                    const dayFeeds = feeds.filter(f => new Date(f.timestamp).toDateString() === dateStr && f.type === 'milk');
+                    const total = dayFeeds.reduce((acc, curr) => acc + (parseInt(curr.amount || curr.amount_ml || 0)), 0);
+                    return {
+                        day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+                        amount: total
+                    };
+                });
+
+                setFeedData(aggregatedFeeds);
+
+                // 2. Growth
+                const stats = await statsStore.getAll();
+                const user = await userStore.get();
+
+                if (user) {
+                    setFeedTarget(parseInt(user.feed_target_ml || user.feedTarget || 750));
+                }
+
+                // Filter weight stats and map
+                // Sort by date asc
+                const weightStats = stats
+                    .filter(s => s.metric === 'weight' || s.weight_kg)
+                    .sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at));
+
+                const growthMappers = weightStats.map(s => {
+                    // Try to calculate age at that timestamp if possible, otherwise skip or approximate
+                    // For now, let's just plot by index or simply skip age calc if too complex without DOB
+                    // Simplest: If we have DOB in user, calc age for each point
+                    let age = 0;
+                    if (user && user.dob) {
+                        const birth = new Date(user.dob);
+                        const recordDate = new Date(s.recorded_at || s.timestamp);
+                        // diff in months
+                        age = (recordDate - birth) / (1000 * 60 * 60 * 24 * 30.44); // approx months
+                    }
+                    return {
+                        age: parseFloat(age.toFixed(1)),
+                        value: parseFloat(s.weight_kg || s.value)
+                    };
+                });
+
+                // Add current user state as latest point if not already there? 
+                // Actually `statsStore` updates user profile too, so strictly history is enough OR user profile is enough.
+                // But let's assume history table is source of truth for the chart.
+
+                // If history empty but user has weight, show at least that point
+                if (growthMappers.length === 0 && user && user.weight_kg) {
+                    const birth = new Date(user.dob);
+                    const today = new Date();
+                    const age = (today - birth) / (1000 * 60 * 60 * 24 * 30.44);
+                    growthMappers.push({ age: parseFloat(age.toFixed(1)), value: parseFloat(user.weight_kg) });
+                }
+
+                setGrowthData(growthMappers);
+            } catch (err) {
+                console.error("Failed to load reports data", err);
+            }
         }
-        setFeedData(data);
 
-        // Prep growth data
-        const stats = statsStore.getAll().filter(s => s.metric === 'weight');
-        const user = userStore.get();
-        // Mock historical data + current user data
-        const history = [
-            { age: 0, value: 3.3 }, // Birth
-            ...stats.map(s => ({ age: 3, value: s.value })), // Mock mapping time to age for demo
-            { age: user.ageMonths, value: user.weightKg }
-        ];
-        // Remove duplicates/cleanup in real app
-        setGrowthData(history);
-
+        fetchData();
     }, []);
 
     return (
@@ -89,10 +135,10 @@ export default function Reports() {
                         <BarChart2 size={20} color="var(--primary)" />
                         Weekly Milk Intake
                     </h3>
-                    <FeedChart data={feedData} target={parseInt(userStore.get()?.feedTarget || 750)} />
+                    <FeedChart data={feedData} target={feedTarget} />
                     <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--background)', borderRadius: 'var(--radius-sm)' }}>
                         <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Target Goal</p>
-                        <p style={{ fontWeight: 'bold' }}>{userStore.get()?.feedTarget || 750} ml / day</p>
+                        <p style={{ fontWeight: 'bold' }}>{feedTarget} ml / day</p>
                     </div>
                 </div>
             ) : (
