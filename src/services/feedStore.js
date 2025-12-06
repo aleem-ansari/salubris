@@ -40,21 +40,53 @@ export const feedStore = {
         return data;
     },
 
-    getToday: async () => {
+    getByDate: async (date) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return [];
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const start = new Date(date);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(date);
+        end.setHours(23, 59, 59, 999);
 
         const { data } = await supabase
             .from('feeds')
             .select('*')
             .eq('user_id', user.id)
-            .gte('timestamp', today.toISOString())
+            .gte('timestamp', start.toISOString())
+            .lte('timestamp', end.toISOString())
             .order('timestamp', { ascending: false });
 
-        // Map back to frontend expectation if needed (amount_ml -> amount)
-        return (data || []).map(f => ({ ...f, amount: f.amount_ml }));
+        return (data || []).map(f => ({ ...f, amount: f.amount_ml, foodItem: f.subtype }));
+    },
+
+    getToday: async () => {
+        return feedStore.getByDate(new Date());
+    },
+
+    update: async (id, feed) => {
+        const { data, error } = await supabase
+            .from('feeds')
+            .update({
+                type: feed.type,
+                subtype: feed.subtype, // foodItem
+                amount_ml: feed.amount,
+                timestamp: feed.timestamp
+            })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    delete: async (id) => {
+        const { error } = await supabase
+            .from('feeds')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
     }
 };

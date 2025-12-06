@@ -12,36 +12,88 @@ export default function FeedTracker() {
     const [time, setTime] = useState(new Date().toTimeString().slice(0, 5));
     const [showSuccess, setShowSuccess] = useState(false);
 
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [editingId, setEditingId] = useState(null);
+
     useEffect(() => {
-        feedStore.getToday().then(setFeeds);
-    }, []);
+        loadFeeds(selectedDate);
+    }, [selectedDate]);
+
+    const loadFeeds = async (date) => {
+        const data = await feedStore.getByDate(new Date(date));
+        setFeeds(data);
+    };
 
     const handleSave = async (e) => {
         e.preventDefault();
 
-        // Construct date from today's date + selected time
-        const date = new Date();
+        // Construct date from selectedDate + selected time
+        const date = new Date(selectedDate);
         const [hours, minutes] = time.split(':');
         date.setHours(parseInt(hours), parseInt(minutes));
 
+        const feedData = {
+            type,
+            subtype: type === 'solid' ? foodItem : null,
+            amount: type === 'milk' ? amount : null,
+            timestamp: date.toISOString()
+        };
+
         try {
-            await feedStore.add({
-                type,
-                amount: type === 'milk' ? amount : null,
-                foodItem: type === 'solid' ? foodItem : null,
-                timestamp: date.toISOString()
-            });
-            const today = await feedStore.getToday();
-            setFeeds(today);
-            setAmount('');
-            setFoodItem('');
-            setShowSuccess(true);
+            if (editingId) {
+                await feedStore.update(editingId, feedData);
+                setShowSuccess(true); // 'Updated!'
+            } else {
+                await feedStore.add(feedData);
+                setShowSuccess(true);
+            }
+
+            await loadFeeds(selectedDate);
+            resetForm();
             setTimeout(() => setShowSuccess(false), 2000);
         } catch (error) {
             console.error(error);
             alert('Failed to save feed');
         }
     };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this log?")) return;
+        try {
+            await feedStore.delete(id);
+            await loadFeeds(selectedDate);
+        } catch (error) {
+            console.error(error);
+            alert("Failed to delete");
+        }
+    }
+
+    const handleEdit = (feed) => {
+        setEditingId(feed.id);
+        setType(feed.type);
+        if (feed.type === 'milk') {
+            setAmount(feed.amount);
+            setFoodItem('');
+        } else {
+            setFoodItem(feed.foodItem || feed.subtype);
+            setAmount('');
+        }
+        // Extract time from timestamp
+        const d = new Date(feed.timestamp);
+        const hours = d.getHours().toString().padStart(2, '0');
+        const minutes = d.getMinutes().toString().padStart(2, '0');
+        setTime(`${hours}:${minutes}`);
+
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    const resetForm = () => {
+        setEditingId(null);
+        setAmount('');
+        setFoodItem('');
+        setTime(new Date().toTimeString().slice(0, 5));
+    }
 
     return (
         <div style={{ paddingBottom: '2rem' }}>
@@ -50,13 +102,30 @@ export default function FeedTracker() {
                 <button onClick={() => navigate('/dashboard')} style={{ padding: '0.5rem', marginLeft: '-0.5rem' }}>
                     <ArrowLeft size={24} color="var(--text-main)" />
                 </button>
-                <h2>Feed Tracker</h2>
+                <div style={{ flex: 1 }}>
+                    <h2 style={{ margin: 0 }}>Feed Tracker</h2>
+                    <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => {
+                            setSelectedDate(e.target.value);
+                            resetForm();
+                        }}
+                        style={{
+                            border: 'none',
+                            background: 'transparent',
+                            color: 'var(--text-muted)',
+                            fontSize: '0.875rem',
+                            fontFamily: 'inherit'
+                        }}
+                    />
+                </div>
             </div>
 
             {/* Tabs */}
             <div className="card" style={{ padding: '0.5rem', display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: 'var(--border)' }}>
                 <button
-                    onClick={() => setType('milk')}
+                    onClick={() => { setType('milk'); setEditingId(null); }}
                     style={{
                         flex: 1,
                         padding: '0.75rem',
@@ -74,7 +143,7 @@ export default function FeedTracker() {
                     </div>
                 </button>
                 <button
-                    onClick={() => setType('solid')}
+                    onClick={() => { setType('solid'); setEditingId(null); }}
                     style={{
                         flex: 1,
                         padding: '0.75rem',
@@ -132,15 +201,30 @@ export default function FeedTracker() {
                     </div>
                 )}
 
-                <button type="submit" className="btn" style={{ width: '100%' }}>
-                    {showSuccess ? <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={20} /> Saved!</span> : 'Log Feed'}
-                </button>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    {editingId && (
+                        <button type="button" onClick={resetForm} className="btn" style={{ flex: 1, background: 'var(--text-muted)' }}>
+                            Cancel
+                        </button>
+                    )}
+                    <button type="submit" className="btn" style={{ flex: 2 }}>
+                        {showSuccess ? (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+                                <CheckCircle size={20} /> {editingId ? 'Updated!' : 'Saved!'}
+                            </span>
+                        ) : (
+                            editingId ? 'Update Feed' : 'Log Feed'
+                        )}
+                    </button>
+                </div>
             </form>
 
             {/* Stats/History */}
-            <h3 style={{ marginBottom: '1rem' }}>Today's Feeds</h3>
+            <h3 style={{ marginBottom: '1rem' }}>
+                {new Date(selectedDate).toDateString() === new Date().toDateString() ? "Today's Feeds" : `Feeds on ${new Date(selectedDate).toLocaleDateString()}`}
+            </h3>
             {feeds.length === 0 ? (
-                <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '2rem' }}>No feeds logged today yet.</p>
+                <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '2rem' }}>No feeds logged for this day.</p>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {feeds.map(feed => (
@@ -154,10 +238,17 @@ export default function FeedTracker() {
                             }}>
                                 {feed.type === 'milk' ? <Milk size={20} /> : <Utensils size={20} />}
                             </div>
-                            <div style={{ flex: 1 }}>
-                                <p style={{ fontWeight: '600' }}>{feed.type === 'milk' ? `${feed.amount} ml` : feed.foodItem}</p>
+                            <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => handleEdit(feed)}>
+                                <p style={{ fontWeight: '600' }}>{feed.type === 'milk' ? `${feed.amount} ml` : (feed.foodItem || feed.subtype)}</p>
                                 <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{new Date(feed.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--primary)', marginTop: '0.25rem' }}>Tap to edit</p>
                             </div>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleDelete(feed.id); }}
+                                style={{ padding: '0.5rem', color: 'var(--danger)', background: 'transparent', border: 'none' }}
+                            >
+                                Delete
+                            </button>
                         </div>
                     ))}
                 </div>
