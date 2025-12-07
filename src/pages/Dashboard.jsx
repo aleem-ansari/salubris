@@ -27,7 +27,7 @@ export default function Dashboard() {
                 marginBottom: '2rem'
             }}>
                 <div>
-                    <h1 style={{ fontSize: '1.5rem' }}>Hi, {user?.name || 'Parent'}</h1>
+                    <h1 style={{ fontSize: '1.5rem' }}>Hi, {user?.name ? `${user.name}'s Parent` : 'Parent'}</h1>
                     <p style={{ color: 'var(--text-muted)' }}>Here is your daily overview</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
