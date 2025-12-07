@@ -7,6 +7,7 @@ import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import Profile from './pages/Profile'
 
 import FeedTracker from './pages/FeedTracker'
 import PoopTracker from './pages/PoopTracker'
@@ -110,6 +111,11 @@ function AppRoutes() {
         <Route path="/reports" element={
           <PrivateRoute>
             <Reports />
+          </PrivateRoute>
+        } />
+        <Route path="/profile" element={
+          <PrivateRoute>
+            <Profile />
           </PrivateRoute>
         } />
         <Route path="/" element={<Navigate to={user ? (profile ? "/dashboard" : "/onboarding") : "/login"} />} />

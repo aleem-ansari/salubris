@@ -34,16 +34,20 @@ export default function Dashboard() {
                     <button onClick={handleSignOut} style={{ padding: '0.5rem', borderRadius: '50%', border: '1px solid var(--border)', background: 'transparent' }}>
                         <LogOut size={20} color="var(--text-muted)" />
                     </button>
-                    <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '50%',
-                        overflow: 'hidden',
-                        background: 'var(--background)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
+                    <div
+                        onClick={() => navigate('/profile')}
+                        style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            overflow: 'hidden',
+                            background: 'var(--background)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer'
+                        }}
+                    >
                         <img src="/logo.png" alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                 </div>
