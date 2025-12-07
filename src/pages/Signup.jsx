@@ -7,16 +7,14 @@ export default function Signup() {
     const { signUp } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
+
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (password !== confirmPassword) {
-            return setError('Passwords do not match');
-        }
+
 
         setError('');
         setLoading(true);
@@ -78,7 +76,7 @@ export default function Signup() {
                             }}
                         />
                     </div>
-                    <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ marginBottom: '1.5rem' }}>
                         <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem' }}>Password</label>
                         <input
                             type="password"
@@ -92,20 +90,7 @@ export default function Signup() {
                             }}
                         />
                     </div>
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem' }}>Confirm Password</label>
-                        <input
-                            type="password"
-                            required
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            style={{
-                                width: '100%', padding: '0.75rem',
-                                borderRadius: 'var(--radius-md)', border: '1px solid var(--border)',
-                                fontSize: '1rem'
-                            }}
-                        />
-                    </div>
+
                     <button type="submit" className="btn" style={{ width: '100%' }} disabled={loading}>
                         {loading ? 'Creating Account...' : 'Sign Up'}
                     </button>
