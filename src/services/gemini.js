@@ -25,8 +25,8 @@ export const analyzePoopImage = async (imageFile) => {
     }
 
     try {
-        // Reverting to stable model version
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // Using user requested model
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         // Convert file to base64
         const base64Data = await new Promise((resolve, reject) => {
