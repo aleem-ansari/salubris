@@ -25,8 +25,8 @@ export const analyzePoopImage = async (imageFile) => {
     }
 
     try {
-        // Using Gemini 2.5 Flash Lite as requested
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+        // Reverting to stable model version
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         // Convert file to base64
         const base64Data = await new Promise((resolve, reject) => {
